@@ -48,7 +48,7 @@ let debugUI = document.getElementById('lmo-debug-ui');
 if (!debugUI) {
     debugUI = document.createElement('div');
     debugUI.id = 'lmo-debug-ui';
-    debugUI.style.cssText =[
+    debugUI.style.cssText = [
         'position:fixed', 'top:80px', 'left:10px',
         'background:rgba(0,0,0,0.88)', 'color:white',
         'padding:12px', 'font-family:monospace', 'font-size:13px',
@@ -177,7 +177,7 @@ function runPaladinEngine() {
         }
     });
 
-    const valid =[];
+    const valid = [];
     
     for (const [el, d] of pData) {
         const virtualTop = d.lastR.top - Y_OFFSET;
@@ -260,6 +260,29 @@ let lastPriestClickTime = 0;
 const mainLoop = setInterval(() => {
     if (!isBotEnabled) return;
 
+    const tryClick = (btn, state) => {
+        if (btn && !btn.className.toLowerCase().includes('disabled')) {
+            globalBotState = state;
+            simulateRealClick(btn);
+            renderGlobalUI();
+            return true;
+        }
+        return false;
+    };
+
+    let btnContinue, btnGoBack;
+    const cw = document.querySelector('[class*="continueButtonWrapper_"]');
+    if (cw) {
+        btnContinue = cw.querySelector('[role="button"]');
+        if (tryClick(btnContinue,  "CLICKING CONTINUE"))  return;
+    }
+
+    const gb = document.querySelector('[class*="fullScreenOnMobile_"] [class*="footer_"]');
+    if (gb) {
+        btnGoBack = gb.querySelectorAll('[role="button"]');
+        if (btnGoBack.length === 1 && tryClick(btnGoBack[0],  "CLICKING GO BACK")) return;
+    }
+
     const allP = document.querySelectorAll('[class*="projectile_"]');
     if (allP.length > 0) {
         if (!isPaladinGameActive) {
@@ -334,30 +357,17 @@ const mainLoop = setInterval(() => {
         renderGlobalUI(); return;
     }
 
-    let btnContinue, btnBattle, btnCraft, btnAdventure;
-    const cw = document.querySelector('[class*="continueButtonWrapper_"]');
-    if (cw) btnContinue = cw.querySelector('[role="button"]');
+    let btnBattle, btnCraft, btnAdventure;
 
     document.querySelectorAll('img[class*="asset_"], img[class*="activityButtonAsset_"]').forEach(img => {
         const btn = img.closest('[role="button"]');
         if (!btn) return;
         const src = img.src || '';
-        if (src.includes('0492e39') || src.includes('19393b5')) btnBattle    = btn;
-        if (src.includes('23aba2a') || src.includes('b7febb5')) btnCraft     = btn;
-        if (src.includes('282df26'))                             btnAdventure = btn;
+        if (src.includes('0492e39') || src.includes('19393b5') || src.includes('16fb255')) btnBattle    = btn;
+        if (src.includes('23aba2a') || src.includes('b7febb5') || src.includes('b603820')) btnCraft     = btn;
+        if (src.includes('282df26'))                                                       btnAdventure = btn;
     });
 
-    const tryClick = (btn, state) => {
-        if (btn && !btn.className.toLowerCase().includes('disabled')) {
-            globalBotState = state;
-            simulateRealClick(btn);
-            renderGlobalUI();
-            return true;
-        }
-        return false;
-    };
-
-    if (tryClick(btnContinue,  "CLICKING CONTINUE"))  return;
     if (tryClick(btnBattle,    "STARTING BATTLE"))     return;
     if (tryClick(btnCraft,     "STARTING CRAFT"))      return;
     if (tryClick(btnAdventure, "STARTING ADVENTURE"))  return;
