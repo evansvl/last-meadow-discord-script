@@ -9,6 +9,7 @@ let lock = null;
 let projIdCounter = 0; 
 
 let debugUI = document.getElementById('lmo-debug-ui');
+let debugStatus, btnStopBot;
 if (!debugUI) {
     debugUI = document.createElement('div');
     debugUI.id = 'lmo-debug-ui';
@@ -20,22 +21,20 @@ if (!debugUI) {
         'border:2px solid #555', 'border-radius:8px',
         'min-width:300px', 'box-shadow:0 4px 15px rgba(0,0,0,0.5)'
     ].join(';');
-    document.body.appendChild(debugUI);
-}
-
-function getControlsHTML() {
-    return `<div style="margin-top:12px;padding-top:12px;border-top:1px solid #444;display:flex;align-items:center;">
-        <button onclick="window.stopBot()" style="pointer-events:auto;background:#e74c3c;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-family:monospace;">Turn Off</button>
+    debugUI.innerHTML = `<b style='color:#0f0;font-size:14px'>[ Last Meadow Online Bot ]</b><br><br>` +
+        `Status: <span id='debugStatus' style='color:cyan'>${globalBotState}</span>` +
+        `<div style="margin-top:12px;padding-top:12px;border-top:1px solid #444;display:flex;align-items:center;">
+        <button id="btnStopBot" style="pointer-events:auto;background:#e74c3c;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:bold;font-family:monospace;">Turn Off</button>
         <span style="color:#aaa;font-size:11px;margin-left:10px;">or press Alt + S</span>
-    </div>`;
+        </div>`;
+    document.body.appendChild(debugUI);
+    debugStatus = debugUI.querySelector("#debugStatus");
+    btnStopBot = debugUI.querySelector("#btnStopBot");
 }
 
-function updateDebugUI(html) { if (debugUI) debugUI.innerHTML = html; }
-
-function renderGlobalUI() {
-    if (isPaladinGameActive) return;
-    updateDebugUI(`<b style='color:#0f0;font-size:14px'>[ Last Meadow Online Bot ]</b><br><br>` +
-        `Status: <span style='color:cyan'>${globalBotState}</span>` + getControlsHTML());
+function updateDebugUI(html = null) {
+    if (debugStatus && html) { debugStatus.innerHTML = globalBotState + `<br><br><span style="color:white">${html}</span>` }
+    else if (debugStatus && debugStatus.innerHTML !== globalBotState && !isPaladinGameActive) { debugStatus.innerHTML = globalBotState };
 }
 
 function simulateRealClick(el) {
@@ -79,13 +78,15 @@ function runPaladinEngine() {
         lock = null;
         pData.clear();
         globalBotState = "FINISHED SHIELD MINIGAME";
-        renderGlobalUI();
+        updateDebugUI();
         return;
     }
 
     const shieldR  = shield.getBoundingClientRect();
     const catchY   = shieldR.top;           
     const now      = performance.now();
+
+    globalBotState = "SHIELD MINIGAME";
 
     allP.forEach(el => {
         const r = el.getBoundingClientRect();
@@ -186,9 +187,8 @@ function runPaladinEngine() {
 
     allP.forEach(el => { if (document.body.contains(el)) el.style.border = ''; });
 
-    let ui = `<b style='color:#0f0;font-size:14px'>[ Shield Minigame ]</b><br>`;
-    ui += `Y-Offset: <b style='color:orange'>+${Y_OFFSET}px</b><br>`;
-    ui += `Memory: <b>${pData.size}</b> | Active: <b>${valid.length}</b><br><br>`;
+    let ui = `Y-Offset: <b style='color:orange'>+${Y_OFFSET}px</b><br>` +
+             `Memory: <b>${pData.size}</b> | Active: <b>${valid.length}</b><br><br>`;
 
     if (target) {
         if (document.body.contains(target.el)) {
@@ -206,7 +206,6 @@ function runPaladinEngine() {
         ui += `[ID:${v.d.id}] ETA:${Math.round(v.eta)}ms W:${Math.round(v.d.lastR.width)} Norm:${Math.round(v.d.stableWidth)}</div>`;
     });
 
-    ui += getControlsHTML();
     updateDebugUI(ui);
 
     if (target) {
@@ -228,7 +227,7 @@ const mainLoop = setInterval(() => {
         if (btn && !btn.className.toLowerCase().includes('disabled')) {
             globalBotState = state;
             simulateRealClick(btn);
-            renderGlobalUI();
+            updateDebugUI();
             return true;
         }
         return false;
@@ -272,7 +271,7 @@ const mainLoop = setInterval(() => {
                 t._botShot = true;
             }
         });
-        renderGlobalUI(); return;
+        updateDebugUI(); return;
     }
 
     const arrowImgs = document.querySelectorAll(
@@ -290,7 +289,7 @@ const mainLoop = setInterval(() => {
             globalBotState = "CRAFTING ARROWS";
             simulateKeyPress(active.getAttribute('alt'));
             lastCraftKeyTime = Date.now();
-            renderGlobalUI(); return;
+            updateDebugUI(); return;
         }
     }
 
@@ -318,7 +317,7 @@ const mainLoop = setInterval(() => {
                 }
             }
         }
-        renderGlobalUI(); return;
+        updateDebugUI(); return;
     }
 
     let btnBattle, btnCraft, btnAdventure;
@@ -337,7 +336,7 @@ const mainLoop = setInterval(() => {
     if (tryClick(btnAdventure, "STARTING ADVENTURE"))  return;
 
     globalBotState = "SCANNING / IDLE...";
-    renderGlobalUI();
+    updateDebugUI();
 
 }, speedMs);
 
@@ -349,11 +348,13 @@ window.stopBot = function() {
     window.removeEventListener('mousemove',   blockRealMouse, true);
     window.removeEventListener('pointermove', blockRealMouse, true);
     document.removeEventListener('keydown', stopBotHotkey);
+    btnStopBot.removeEventListener('click', window.stopBot);
     if (debugUI) debugUI.remove();
     console.log('🛑 BOT STOPPED');
 };
 
 function stopBotHotkey(e) { if (e.altKey && e.code === 'KeyS') window.stopBot(); }
+btnStopBot.addEventListener('click', window.stopBot);
 document.addEventListener('keydown', stopBotHotkey);
 
 console.clear();
